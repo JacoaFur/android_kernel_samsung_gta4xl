@@ -358,6 +358,9 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
 	return error;
 }
 
+// KernelSU hook
+extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
+	int *flags);
 /*
  * access() needs to use the real uid/gid, not the effective uid/gid.
  * We do this by temporarily clearing all FS-related capabilities and
@@ -383,6 +386,7 @@ SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
 	override_cred->fsuid = override_cred->uid;
 	override_cred->fsgid = override_cred->gid;
 
+	ksu_handle_faccessat(&dfd, &filename, &mode, NULL);  // call KSU hook first
 	if (!issecure(SECURE_NO_SETUID_FIXUP)) {
 		/* Clear the capabilities if we switch to a non-root user */
 		kuid_t root_uid = make_kuid(override_cred->user_ns, 0);
